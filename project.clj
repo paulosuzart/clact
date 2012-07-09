@@ -1,6 +1,6 @@
 (defproject clacts "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "Clacts: Record your friends facts"
+  :url "paulosuzart.guithub.com/blog/2012/07/09/tcp-server-with-clojure-aleph-and-gloss/"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[aleph "0.2.1-rc5"]
