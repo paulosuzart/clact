@@ -4,7 +4,8 @@
         [aleph.tcp] 
         [gloss.core]
         [gloss.io])
-  (:require [clacts.prot :as prt]))
+  (:require [clacts.prot :as prt])
+   (:gen-class))
 
 (def db
   {:classname "org.sqlite.JDBC"
@@ -12,7 +13,7 @@
    :subname "db/database.db"})
 
 ;; Simple query to warm the database
-(defonce warmup-q ["select count (*) from fatcs"])
+(defonce warmup-q ["select count (*) from facts"])
 
 (defn warmup 
   "Access SQLite at sturt up, so users don't have to wait
@@ -30,8 +31,8 @@
     (if (.exists f)
           (.setLastModified f (System/currentTimeMillis))
       	(do (println "Setting up db for the first time")
-          (setupp)
-          (spit f-name "")))))
+          (spit f-name "")
+          (setupp)))))
 
 (defn setup-db 
   "Setup procedure. DDL the facts table."
@@ -41,7 +42,8 @@
 			[:date :text]
 			[:author :text]
 			[:via :text]
-			[:fact :text])))
+			[:fact :text]))
+  (println "Database created with table facts."))
 
 (defn put-fact 
   "Inserts the fact into db according to proto/PUTC.
@@ -105,7 +107,7 @@
   [& args]  
   (try 
     (setup "db/database.check" setup-db)
-    (start-tcp-server handler {:port 10000})
     (warmup warmup-q)
-    (catch Exception e (.getCause e)))
-  (println "Ready to get facts! Go for it."))
+    (println "Ready to get facts! Go for it.")
+    (start-tcp-server handler {:port 10000})
+    (catch Exception e (.printStackTrace e))))
