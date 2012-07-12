@@ -3,7 +3,9 @@
         [lamina.core] 
         [aleph.tcp] 
         [gloss.core]
-        [gloss.io])
+        [gloss.io]
+        [clojure.java.io]
+        [clojure.tools.cli])
   (:require [clacts.prot :as prt])
    (:gen-class))
 
@@ -26,12 +28,14 @@
   "Temp way to check if the app was already set.
   Takes f-name for the control file and setupp as the
   function that will set up the database if it is not set."
-  [f-name setupp]
-    (let [f (clojure.java.io/file f-name)]
+  [dbfile setupp]
+    (let [f (clojure.java.io/file dbfile)]
     (if (.exists f)
           (.setLastModified f (System/currentTimeMillis))
-      	(do (println "Setting up db for the first time")
-          (spit f-name "")
+      	(do 
+          (println "Setting up db for the first time")
+          (.mkdir (file (.getParent f)))
+          (spit dbfile "")
           (setupp)))))
 
 (defn setup-db 
@@ -61,22 +65,26 @@
 (defn listq 
   "Function that executes a query against facts table.
   Presumes that the query will always select all columns."
-  [q ch]
+  [q ch repmess]
   (with-connection db
-    (with-query-results rs q 
-      (doseq [r rs]
-        (enqueue ch (encode prt/CMDS ["LSR" (str (:date r)) 
-                                            (str (:author r)) 
-                                            (str (:via r))
-                                            (str (:fact r))]))))))
+    (with-query-results rs q
+      (if (not rs)
+          (enqueue ch (encode prt/CMDS ["REP" repmess]))
+          (doseq [r rs]
+            (enqueue ch (encode prt/CMDS ["LSR" (str (:date r)) 
+                                                (str (:author r)) 
+                                                (str (:via r))
+                                                (str (:fact r))])))))))
 
 (defn list-facts 
   "List the facts for a given author. * means all authors."
   [author ch]
     (let [q "select date, author, via, fact from facts"]
       (if (= "*" author)
-        (listq [q] ch)
-        (listq [(str q " where author = ?") author] ch))))
+        (listq [q] ch "Nothing recorded so far. Observer your friends and PUT a lot!!!")
+        (listq [(str q " where author = ?") author] 
+                ch 
+                (format "Nothing found for \"%s\". Try someone else" author)))))
   
 
 (defonce err-msgs ["Wrong commmand! Try again." 
@@ -95,19 +103,34 @@
   [ch ci]
   (receive-all ch
     (fn [b]
-      (println b)
       (let [deced (decode prt/CMDS b)]
-        (println "Processing command: " deced)
+        (println "Processing command: " deced "From " ci)
         (condp = (first deced)
           "PUT" (put-fact (rest deced) ch)
           "LSA" (list-facts (second deced) ch)
           (handle-err ch ci))))))
 
+(defn wrap-ex [h]
+  (fn [ch ci]
+    (try 
+      (h ch ci)
+      (catch Exception e 
+        (do 
+          (println "Something went wrong!!! " e)
+          (enqueue ch ["REP" "Ooooops. Error while executing your input. Too bad."]))))))
+
 (defn -main
   [& args]  
-  (try 
-    (setup "db/database.check" setup-db)
-    (warmup warmup-q)
-    (println "Ready to get facts! Go for it.")
-    (start-tcp-server handler {:port 10000})
-    (catch Exception e (.printStackTrace e))))
+  (let [[opts _ ban] (cli args 
+                        ["-p" "--port" "Port to listen to connections"
+                         :default 10200 :parse-fn #(Integer/parseInt %)]
+                        ["-h" "--help" "Show this help" :default false :flag true])]
+    (when (:help opts)
+      (println ban)
+      (System/exit 0))
+    (try 
+      (setup "db/database.check" setup-db)
+      (warmup warmup-q)
+      (println (format "Ready to get facts! Go for it on PORT %s." (:port opts)))
+      (start-tcp-server (wrap-ex handler) {:port (:port opts)})
+      (catch Exception e (.printStackTrace e)))))
