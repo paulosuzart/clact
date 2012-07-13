@@ -9,6 +9,8 @@
   (:require [clacts.prot :as prt])
    (:gen-class))
 
+(defonce broad-put (channel))
+
 (def db
   {:classname "org.sqlite.JDBC"
    :subprotocol "sqlite"
@@ -52,14 +54,16 @@
 (defn put-fact 
   "Inserts the fact into db according to proto/PUTC.
   Takes the decoded data end the channel to respond."
-  [data ch]
+  [[author via fact] ch]
   (with-connection db
     (insert-record :facts
       {:date (str (System/currentTimeMillis))
-       :author (first data)
-       :via (second data)
-       :fact (last data)}))
-  (enqueue ch (encode prt/CMDS ["REP" "Fact recorded!! Have fun with it."])))
+       :author author
+       :via via
+       :fact fact}))
+  (enqueue broad-put (encode prt/CMDS 
+                      ["REP" 
+                       (format "####Fact recorded by %s!! By %s: %s." via author fact)])))
 
 
 (defn listq 
@@ -101,6 +105,7 @@
   "TCP Handler. Decodes the issued command and calls the appropriate
   function to excetion some action."
   [ch ci]
+  (siphon broad-put ch)
   (receive-all ch
     (fn [b]
       (let [deced (decode prt/CMDS b)]
@@ -109,15 +114,6 @@
           "PUT" (put-fact (rest deced) ch)
           "LSA" (list-facts (second deced) ch)
           (handle-err ch ci))))))
-
-(defn wrap-ex [h]
-  (fn [ch ci]
-    (try 
-      (h ch ci)
-      (catch Exception e 
-        (do 
-          (println "Something went wrong!!! " e)
-          (enqueue ch ["REP" "Ooooops. Error while executing your input. Too bad."]))))))
 
 (defn -main
   [& args]  
@@ -132,5 +128,5 @@
       (setup "db/database.check" setup-db)
       (warmup warmup-q)
       (println (format "Ready to get facts! Go for it on PORT %s." (:port opts)))
-      (start-tcp-server (wrap-ex handler) {:port (:port opts)})
+      (start-tcp-server handler {:port (:port opts)})
       (catch Exception e (.printStackTrace e)))))

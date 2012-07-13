@@ -1,4 +1,4 @@
-(defproject clacts "0.1.0-SNAPSHOT"
+(defproject clacts "0.1.0"
   :description "Clacts: Record your friends facts"
   :url "paulosuzart.guithub.com/blog/2012/07/09/tcp-server-with-clojure-aleph-and-gloss/"
   :license {:name "Eclipse Public License"
