@@ -61,9 +61,9 @@
        :author author
        :via via
        :fact fact}))
-  (enqueue broad-put (encode prt/CMDS 
-                      ["REP" 
-                       (format "####Fact recorded by %s!! By %s: %s." via author fact)])))
+  (enqueue broad-put   ["REP" 
+                       (format "####Fact recorded by %s!! By %s: %s." 
+                        via author fact)]))
 
 
 (defn listq 
@@ -73,12 +73,12 @@
   (with-connection db
     (with-query-results rs q
       (if (not rs)
-          (enqueue ch (encode prt/CMDS ["REP" repmess]))
+          (enqueue ch ["REP" repmess])
           (doseq [r rs]
-            (enqueue ch (encode prt/CMDS ["LSR" (str (:date r)) 
-                                                (str (:author r)) 
-                                                (str (:via r))
-                                                (str (:fact r))])))))))
+            (enqueue ch ["LSR" (str (:date r)) 
+                               (str (:author r)) 
+                               (str (:via r))
+                               (str (:fact r))]))))))
 
 (defn list-facts 
   "List the facts for a given author. * means all authors."
@@ -99,7 +99,7 @@
   "Handle unknown commands responding with random error messages."
   [ch ci]
   (println "Handling err for " ci)
-  (enqueue ch (encode prt/CMDS ["REP" (rand-nth err-msgs)])))
+  (enqueue ch ["REP" (rand-nth err-msgs)]))
 
 (defn handler 
   "TCP Handler. Decodes the issued command and calls the appropriate
