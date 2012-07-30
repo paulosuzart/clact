@@ -107,13 +107,12 @@
   [ch ci]
   (siphon broad-put ch)
   (receive-all ch
-    (fn [b]
-      (let [deced (decode prt/CMDS b)]
-        (println "Processing command: " deced "From " ci)
-        (condp = (first deced)
-          "PUT" (put-fact (rest deced) ch)
-          "LSA" (list-facts (second deced) ch)
-          (handle-err ch ci))))))
+    (fn [cmd]
+      (println "Processing command: " cmd "From " ci)
+      (condp = (first cmd)
+        "PUT" (put-fact (rest cmd) ch)
+        "LSA" (list-facts (second cmd) ch)
+        (handle-err ch ci)))))
 
 (defn -main
   [& args]  
@@ -128,5 +127,5 @@
       (setup "db/database.check" setup-db)
       (warmup warmup-q)
       (println (format "Ready to get facts! Go for it on PORT %s." (:port opts)))
-      (start-tcp-server handler {:port (:port opts)})
+      (start-tcp-server handler {:port (:port opts), :frame prt/CMDS})
       (catch Exception e (.printStackTrace e)))))
