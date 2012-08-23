@@ -97,19 +97,19 @@
 	
 	(put-fact [_ author via fact]
 		@(d/transact conn [{:clact/via via
-					   		:clact/author author
-					   		:clact/fact fact 
-					   		:db/id #db/id[:db.part/user]}]))
+					   		        :clact/author author
+					   		        :clact/fact fact 
+					   		        :db/id #db/id[:db.part/user]}]))
 
 	(find-by-author [_ author]
 		(let [db (db conn)
-			  res (q '[:find ?e :in $ ?a :where [?e :clact/author ?a]] db author)
-			  extract (fn [e] {:author (:clact/author e)
-			  				   :via (:clact/via e)
-			  				   :date nil
-			  				   :fact (:clact/fact e)})
-			  as-e #(d/entity db (first %))]
-			  (map #(extract (as-e %)) res))))
+			    res (q '[:find ?e :in $ ?a :where [?e :clact/author ?a]] db author)
+			    extract (fn [e] {:author (:clact/author e)
+			  				           :via (:clact/via e)
+			  				           :date nil
+			  				           :fact (:clact/fact e)})
+			    as-e #(d/entity db (first %))]
+		  (map #(extract (as-e %)) res))))
 
 ;;Auxiliary function to generation a connection before the Storage itself
 
