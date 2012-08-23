@@ -7,5 +7,6 @@
                  [org.clojure/java.jdbc "0.2.3"]
                  [org.xerial/sqlite-jdbc "3.6.16"]
                  [org.clojure/tools.cli "0.2.1"]
-  				 [org.clojure/clojure "1.3.0"]]
+                 [com.datomic/datomic-free "0.8.3438"]
+  				 [org.clojure/clojure "1.4.0"]]
   :main clacts.core)

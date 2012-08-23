@@ -1,0 +1,26 @@
+[
+ ;; community
+
+ {:db/id #db/id[:db.part/db]
+  :db/ident :clact/author
+  :db/valueType :db.type/string
+  :db/cardinality :db.cardinality/one
+  :db/doc "The author of a given fact"
+  :db.install/_attribute :db.part/db}
+
+ {:db/id #db/id[:db.part/db]
+  :db/ident :clact/via
+  :db/valueType :db.type/string
+  :db/cardinality :db.cardinality/one
+  :db/doc "Who noticed the fact"
+  :db.install/_attribute :db.part/db}
+
+ {:db/id #db/id[:db.part/db]
+  :db/ident :clact/fact
+  :db/valueType :db.type/string
+  :db/cardinality :db.cardinality/one
+  :db/fulltext true
+  :db/doc "The fact itself"
+  :db.install/_attribute :db.part/db}
+
+ ]

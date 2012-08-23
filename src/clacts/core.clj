@@ -29,7 +29,7 @@
   "List the facts for a given author. * means all authors."
   [author ch storage]
     (let [res (find-by-author storage author)]
-      (if res
+      (if (seq res)
         (doseq [r res]
           (enqueue ch ["LSR" (str (:date r)) 
                              (str (:author r)) 
@@ -63,8 +63,9 @@
   [& args]  
   (let [[opts _ ban] (cli args 
                         ["-p" "--port" "Port to listen to connections"
-                         :default 10200 :parse-fn #(Integer/parseInt %)]
-                        ["-s" "--storage" "Type of storage. Use sqlite or datomic"] 
+                              :default 10200 :parse-fn #(Integer/parseInt %)]
+                        ["-s" "--storage" "Type of storage. Use sqlite or datomic" 
+                              :default "sqlite"] 
                         ["-h" "--help" "Show this help" :default false :flag true])]
     (when (:help opts)
       (println ban)
