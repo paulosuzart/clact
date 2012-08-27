@@ -27,15 +27,25 @@
 
 (defn lsa
   "List the facts for a given author. * means all authors."
-  [author ch storage]
-    (let [res (find-by-author storage author)]
-      (if (seq res)
-        (doseq [r res]
-          (enqueue ch ["LSR" (str (:date r)) 
-                             (str (:author r)) 
-                             (str (:via r))
-                             (str (:fact r))]))
-        (enqueue ch ["REP" "Nothing found. Try again!"]))))
+  [[author] ch storage]
+    (if-let [res (find-by-author storage author)]
+      (doseq [r res]
+        (enqueue ch ["LSR" (str (:date r)) 
+                           (str (:author r)) 
+                           (str (:via r))
+                           (str (:fact r))]))
+      (enqueue ch ["REP" "Nothing found. Try again!"])))
+
+(defn lsc
+  "List facts by its content."
+  [[content] ch storage]
+  (if-let [res (find-by-content storage content)]
+    (doseq [r res]
+      (enqueue ch ["LSR" (str (:date r))
+                         (str (:author r))
+                         (str (:via r))
+                         (str (:fact r))]))
+    (enqueue ch ["REP" "Nothing found. Try again!"])))
   
 
 (defn handle-err 
@@ -47,17 +57,21 @@
 (defn handler 
   "TCP Handler. Decodes the issued command and calls the appropriate
   function to excetion some action."
-  [storage]
+  [storage commands]
     (fn 
       [ch ci]
         (siphon broad-put ch)
         (receive-all ch
           (fn [cmd]
             (println "Processing command: " cmd "From " ci)
-            (condp = (first cmd)
-              "PUT" (put (rest cmd) ch storage)
-              "LSA" (lsa (second cmd) ch storage)
+            (if-let [f ((-> cmd first keyword) commands)]
+              (f (rest cmd) ch storage)
               (handle-err ch ci))))))
+      
+(def commands 
+  {:PUT put
+   :LSA lsa
+   :LSC lsc})
 
 (defn -main
   [& args]  
@@ -73,7 +87,7 @@
     (try
       (let [storage (make-storage (:storage opts))]
         (setup storage)
-        (start-tcp-server (handler storage) {:port (:port opts), :frame prt/CMDS})
+        (start-tcp-server (handler storage commands) {:port (:port opts), :frame prt/CMDS})
         (println (format "Ready to get facts! Go for it on PORT %s." (:port opts)))
         (println (format "Persistence storage is %s." (:storage opts))))
     (catch Exception e 

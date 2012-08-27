@@ -4,12 +4,15 @@
 									insert-record 
 									with-query-results]]
 		  [clojure.java.io]
-		  [datomic.api :only [q db] :as d]))
+		  [datomic.api :only [q db] :as d]
+		  [clojure.pprint]))
 
 (defprotocol StorageMediumP
 	(setup [this])
 	(put-fact [this author via fact])
-	(find-by-author [this author]))
+	(find-by-author [this author])
+  	(storage-name [this])
+  	(find-by-content [this content]))
 
 ;;============ SQLite 
 
@@ -48,7 +51,7 @@
 	StorageMediumP
 
 	;;setup sqlite
-	(setup [_]
+	(setup [this]
 		(let [f (clojure.java.io/file dbfilechk)]
     		(if (.exists f)
           		(.setLastModified f (System/currentTimeMillis))
@@ -56,7 +59,8 @@
           			(println "Setting up db for the first time")
           			(.mkdir (file (.getParent f)))
           			(spit dbfilechk "")
-          		(setupf)))))
+          		(setupf))))
+		this)
 	
 	;; insert a fact into sqlite
 	(put-fact [_ author via fact]
@@ -76,13 +80,27 @@
 			  				(into [] rs)))]
       		(or 
       			(and (= "*" author) (listq [q]))
-      			(listq [(str q " where author = ?") author])))))
+      			(listq [(str q " where author = ?") author]))))
 
+  	(storage-name [this] "sqlite")
+
+  	(find-by-content [this content] 
+  		[(format "Operation not Supported For %" (name this))]))
 
 ; =============== Datomic
 
 (defonce uri "datomic:free://localhost:4334/clact")
 (defonce datomic-schema "datomic/clact-schema.dtm")
+
+
+(defn- extract [e]
+	{:author (:clact/author e)
+	 :via (:clact/via e)
+	 :date (:db/txInstant e)
+	 :fact (:clact/fact e)})
+
+(defn- as-e [db r] 
+	(d/entity db (first r)))
 
 (defn load-schema [s conn]
 	(let [s-tx (read-string (slurp s))]
@@ -92,24 +110,31 @@
 	[schema transactor-config conn]
 	StorageMediumP
 
-	(setup [_] 
-		(load-schema schema conn))
+	(setup [this] 
+		(load-schema schema conn)
+		this)
 	
 	(put-fact [_ author via fact]
 		@(d/transact conn [{:clact/via via
-					   		        :clact/author author
-					   		        :clact/fact fact 
-					   		        :db/id #db/id[:db.part/user]}]))
+					   		:clact/author author
+					   		:clact/fact fact 
+					   		:db/id #db/id[:db.part/user]}]))
 
 	(find-by-author [_ author]
+		(println author)
 		(let [db (db conn)
-			    res (q '[:find ?e :in $ ?a :where [?e :clact/author ?a]] db author)
-			    extract (fn [e] {:author (:clact/author e)
-			  				           :via (:clact/via e)
-			  				           :date nil
-			  				           :fact (:clact/fact e)})
-			    as-e #(d/entity db (first %))]
-		  (map #(extract (as-e %)) res))))
+			    res (q '[:find ?e :in $ ?a :where [?e :clact/author ?a]] db author)]
+		  (seq (map #(extract (as-e db %)) res))))
+  	
+  	(storage-name [this] "datomic")
+
+  	(find-by-content [this content]
+  		(let [db (db conn)
+  			  res (q '[:find ?c :in $ ?search
+  			  		   :where [(fulltext $ :clact/fact ?search) [[?c ?value]]]]
+  			  				    db content)]
+  		  (seq (map #(extract (as-e db %)) res)))))
+
 
 ;;Auxiliary function to generation a connection before the Storage itself
 

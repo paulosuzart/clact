@@ -14,6 +14,7 @@
 	                  (string :utf-8 :suffix "\r\n")])
 
 (defcodec ERRC (string :utf-8))
+(defcodec LSCC ["LSC" lp])
 
 (defcodec CMDS 
   (header 
@@ -23,5 +24,6 @@
     	"LSA" LSAC 
     	"REP" REPC
     	"LSR" LSRC
+        "LSC" LSCC
     	ERRC))
     (fn [b] (first b))))
