@@ -57,21 +57,19 @@
 (defn handler 
   "TCP Handler. Decodes the issued command and calls the appropriate
   function to excetion some action."
-  [storage commands]
+  [storage]
     (fn 
       [ch ci]
         (siphon broad-put ch)
         (receive-all ch
           (fn [cmd]
             (println "Processing command: " cmd "From " ci)
-            (if-let [f ((-> cmd first keyword) commands)]
-              (f (rest cmd) ch storage)
-              (handle-err ch ci))))))
-      
-(def commands 
-  {:PUT put
-   :LSA lsa
-   :LSC lsc})
+            (letfn [(handle [f] (f (rest cmd) ch storage))]
+              (condp = (first cmd)
+              "PUT" (handle put)
+              "LSA" (handle lsa)
+              "LSC" (handle lsc)
+              (handle-err ch ci)))))))
 
 (defn -main
   [& args]  
@@ -79,15 +77,17 @@
                         ["-p" "--port" "Port to listen to connections"
                               :default 10200 :parse-fn #(Integer/parseInt %)]
                         ["-s" "--storage" "Type of storage. Use sqlite or datomic" 
-                              :default "sqlite"] 
+                              :default "sqlite"]
+                        ["-t" "--transactor" "Transactor server:port. For datomic only."
+                              :default "localhost:4334"]
                         ["-h" "--help" "Show this help" :default false :flag true])]
     (when (:help opts)
       (println ban)
       (System/exit 0))
     (try
-      (let [storage (make-storage (:storage opts))]
+      (let [storage (make-storage opts)]
         (setup storage)
-        (start-tcp-server (handler storage commands) {:port (:port opts), :frame prt/CMDS})
+        (start-tcp-server (handler storage) {:port (:port opts), :frame prt/CMDS})
         (println (format "Ready to get facts! Go for it on PORT %s." (:port opts)))
         (println (format "Persistence storage is %s." (:storage opts))))
     (catch Exception e 

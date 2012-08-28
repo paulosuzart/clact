@@ -89,9 +89,7 @@
 
 ; =============== Datomic
 
-(defonce uri "datomic:free://localhost:4334/clact")
 (defonce datomic-schema "datomic/clact-schema.dtm")
-
 
 (defn- extract [e]
 	{:author (:clact/author e)
@@ -102,12 +100,12 @@
 (defn- as-e [db r] 
 	(d/entity db (first r)))
 
-(defn load-schema [s conn]
+(defn- load-schema [s conn]
 	(let [s-tx (read-string (slurp s))]
 		@(d/transact conn s-tx)))
 
 (defrecord DatomicStorage
-	[schema transactor-config conn]
+	[schema conn]
 	StorageMediumP
 
 	(setup [this] 
@@ -138,15 +136,18 @@
 
 ;;Auxiliary function to generation a connection before the Storage itself
 
-(defn- make-datomic [schema transactor-config]
+(defn- make-datomic [schema uri]
+	(println uri)
 	(d/create-database uri)
-	(DatomicStorage. schema transactor-config (d/connect uri)))
+	(DatomicStorage. schema (d/connect uri)))
 
 ; =============== The rest
 
-(defn make-storage [s]
-	(condp = s
+(defn make-storage [opts]
+	(condp = (:storage opts)
 		"sqlite" (SQLiteStorage. db-check-file setup-db)
-		"datomic" (make-datomic datomic-schema nil)
+		"datomic" (make-datomic 
+					datomic-schema 
+					(format "datomic:free://%s/clact" (:transactor opts)))
 		nil))
 
