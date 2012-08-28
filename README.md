@@ -9,11 +9,13 @@ Usage
 =====
 Clone it. Uberja it. And then run the jar: `java -jar ${jar-versio-name}.jar`
 
+```
    Switches               Default         Desc                                      
    --------               -------         ----                                     
    -p, --port             10200           Port to listen to connections             
    -s, --storage          sqlite          Type of storage. Use sqlite or datomic    
    -t, --transactor       localhost:4334  Transactor server:port. For datomic only. 
    -h, --no-help, --help  false           Show this help 
+``` 
 
 
