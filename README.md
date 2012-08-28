@@ -18,4 +18,14 @@ Clone it. Uberja it. And then run the jar: `java -jar ${jar-versio-name}.jar`
    -h, --no-help, --help  false           Show this help 
 ``` 
 
+Then use `telnet localhost 1022` for example to start interacting with
+it.
 
+Use the following commands:
+
+   * `PUT <author> <via> <fact>`: Insert a new fact
+   * `LSA <autor>`: Find fact by a given author
+   * `LSA *`: Find all facts regardless the author (Works only for
+SQLite storage)
+   * `LSC <content>`: Find facts by their content. (Works only for
+datomic storage)
